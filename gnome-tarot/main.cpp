@@ -6,14 +6,15 @@
 class card {
 public:
     int id=0;
+    int ifReversed=0;
     char name[128]="";
     char description[1024]="";
 
-    card(int id1, const char *name1, const char *description1) {
+    card(int id1, int ifReversed1, const char *name1, const char *description1) {
+        ifReversed = ifReversed1;
         id = id1;
         strncpy(name, name1, sizeof(name)-1);
         strncpy(description, description1, sizeof(description)-1);
-        //Type = ;
     }
 
     void reset() {
@@ -29,7 +30,7 @@ struct deck{
     card card1;
     deck *next = nullptr;
 
-    deck() : card1(0, "", "") {}
+    deck() : card1(0, 0, "", "") {}
 };
 deck *head = nullptr;
 
@@ -38,7 +39,7 @@ struct deckList{
     card card1;
     deckList *deckListNext = nullptr;
 
-    deckList() : card1(0, "", "") {}
+    deckList() : card1(0, 0, "", "") {}
 };
 deckList *deckListHead = nullptr;
 
@@ -84,7 +85,6 @@ void addCardToEnd(card card) {
 }
 
 
-
 void createDeck(){
 
     //find number of cards
@@ -126,8 +126,6 @@ void createDeck(){
     }
     fclose(file);
 
-    //printf("ok");
-
 
     //add card descriptions from file
     const char* cardDescription_file_name = "cards/description_straight.txt";
@@ -141,10 +139,6 @@ void createDeck(){
     int num_lines1 = 0;
 
     while (fgets(buffer1, sizeof(buffer1), file1) != nullptr) {
-        // Індекс `num_lines1` використовується правильно
-        // змінена `num_lines` на `num_lines1` у функції
-
-        // change \n to \0
         int len = strlen(buffer1);
         int i = 0;
         while (i < len && buffer1[i] != '\n') {
@@ -162,12 +156,60 @@ void createDeck(){
     fclose(file1);
 
 
+    //add card descriptions from file
+    const char* cardDescriptionRev_file_name = "cards/description_reversed.txt";
+    FILE* file2 = fopen(cardDescriptionRev_file_name, "r");
+
+    if (file2 == nullptr) {
+        fprintf(stderr, "can't open file: %s\n", cardDescriptionRev_file_name);
+    }
+    char buffer2[512];  // Збільшив розмір буфера
+    char* cardDescriptionsRev[numberOfCards];
+    int num_lines2 = 0;
+
+    while (fgets(buffer2, sizeof(buffer2), file2) != nullptr) {
+
+        // change \n to \0
+        int len = strlen(buffer2);
+        int i = 0;
+        while (i < len && buffer2[i] != '\n') {
+            i++;
+        }
+
+        if (buffer2[i] == '\n') {
+            buffer2[i] = '\0';
+        }
+
+        // add to list of descriptions
+        cardDescriptionsRev[num_lines2] = strdup(buffer2);
+        num_lines2++;
+    }
+    fclose(file2);
+
+
 
     //scrypt creates objects and fins out number of cards
     for (int i=0; i<num_lines; i++) {
         //create object
         //card card(i, "cardName", "cardDescription");
-        card card1(i, cardNames[i], cardDescriptions[i]);
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+
+        std::uniform_int_distribution<> dist(0, 1);
+        int j = dist(gen);
+
+
+        char description_choose[512];
+        if(j==0){
+            //description_choose = cardDescriptions[i];
+            strncpy(description_choose, cardDescriptions[i], sizeof(description_choose)-1);
+        }else{
+            //description_choose = cardDescriptionsRev[i];
+            strncpy(description_choose, cardDescriptionsRev[i], sizeof(description_choose)-1);
+        }
+
+        card card1(i, j, cardNames[i], description_choose);
 
         deckList *n;
         if (!deckListHead)
@@ -199,7 +241,6 @@ void createDeck(){
     int deckSort[numberOfCards];
     sortCards(numberOfCards, deckSort);
 
-
     //add cards to linked list deck
     for(int i=0; i<numberOfCards; i++){
         //find card in deckList
@@ -209,7 +250,7 @@ void createDeck(){
         while (current != nullptr) {
             if (current->card1.id == searchId) {
                 // found element
-                card newCard(searchId, current->card1.name, current->card1.description);
+                card newCard(searchId, current->card1.ifReversed, current->card1.name, current->card1.description);
                 addCardToEnd(newCard);
             }
             current = current->deckListNext;
@@ -235,7 +276,7 @@ void menuChooseVoid(int menuChoose){
         case 1: {
             //show one card
             int choose_card_number;
-            printf("choose card number. 1 to 130");
+            printf("choose card number. 1 to 78\n");
             scanf("%i", &choose_card_number);
 
             if(choose_card_number<1 || choose_card_number>130){
@@ -259,8 +300,13 @@ void menuChooseVoid(int menuChoose){
                 menuChooseVoid(menuChoose);
             }
 
-            printf("Card ID: %d\n", deckCurrent->card1.id);
+            //printf("Card ID: %d\n", deckCurrent->card1.id);
             printf("Card Name: %s\n", deckCurrent->card1.name);
+            if(deckCurrent->card1.ifReversed == 1){
+                printf("reversed\n");
+            }else{
+                printf("straight\n");
+            }
             printf("Card Description: %s\n", deckCurrent->card1.description);
             printf("\n");
 
@@ -284,6 +330,11 @@ void menuChooseVoid(int menuChoose){
             while (deckCurrent != nullptr) {
                 printf("Card ID: %d\n", deckCurrent->card1.id);
                 printf("Card Name: %s\n", deckCurrent->card1.name);
+                if(deckCurrent->card1.ifReversed == 1){
+                    printf("reversed\n");
+                }else{
+                    printf("straight\n");
+                }
                 printf("Card Description: %s\n", deckCurrent->card1.description);
                 printf("\n");
 
